@@ -3,13 +3,21 @@
         <ActionBar :title="title">
             <NavigationButton text="Back" android.systemIcon="ic_menu_back" @tap="onNavigationButtonTap" />
             <StackLayout orientation="horizontal">
-                <Button text="add" @tap="addEntry" />
-                <Button text="start" @tap="start" />
-                <Button text="stop" @tap="stop" />
+                <Button style="padding-right: 10; height: 60" text="add" @tap="addManualEntry" />
+                <Button style="padding-right: 10; height: 60" text="start" @tap="start" />
+                <Button style="padding-right: 10; height: 60" text="stop" @tap="stop" />
             </StackLayout>
         </ActionBar>
-        <GridLayout rows="*,auto,auto">
-            <LineChart ref="chart" @loaded="onChartLoaded" @tap="onChartTap" />
+        <GridLayout rows="*, *, *">
+          <GridLayout row="0">
+            <LineChart ref="chart0" @loaded="onChartLoaded(0)" @tap="onChartTap(0)" />
+          </GridLayout>
+          <GridLayout row="1">
+            <LineChart ref="chart1" @loaded="onChartLoaded(1)" @tap="onChartTap(1)" />
+          </GridLayout>
+          <GridLayout row="2">
+            <LineChart ref="chart2" @loaded="onChartLoaded(2)" @tap="onChartTap(2)" />
+          </GridLayout>
         </GridLayout>
     </Page>
 </template>
@@ -37,8 +45,8 @@ export default Vue.extend({
     created() {},
 
     methods: {
-        onChartLoaded() {
-            const chart = this.$refs.chart['nativeView'] as LineChart;
+        onChartLoaded(i: number) {
+            const chart = this.$refs['chart' + i]['nativeView'] as LineChart;
             chart.drawFameRate = true;
 
             chart.backgroundColor = 'white';
@@ -73,9 +81,7 @@ export default Vue.extend({
             const l = chart.getLegend();
 
             // modify the legend ...
-            l.setForm(LegendForm.LINE);
-            l.setTypeface(Font.default.withFontFamily('OpenSans-Light'));
-            l.setTextColor('white');
+            l.setEnabled(false);
 
             const xl = chart.getXAxis();
             xl.setTypeface(Font.default.withFontFamily('OpenSans-Light'));
@@ -87,8 +93,8 @@ export default Vue.extend({
             const leftAxis = chart.getAxisLeft();
             leftAxis.setTypeface(Font.default.withFontFamily('OpenSans-Light'));
             leftAxis.setTextColor('white');
-            leftAxis.setAxisMaximum(100);
-            leftAxis.setAxisMinimum(0);
+            // leftAxis.setAxisMaximum(100);
+            // leftAxis.setAxisMinimum(0);
             leftAxis.setDrawGridLines(true);
 
             const rightAxis = chart.getAxisRight();
@@ -99,7 +105,7 @@ export default Vue.extend({
         },
         start() {
             if (!this.timer) {
-                this.timer = setInterval(this.addEntry, 25);
+                this.timer = setInterval(this.addEntries, 10);
             }
         },
         stop() {
@@ -108,15 +114,27 @@ export default Vue.extend({
                 this.timer = null;
             }
         },
-        addEntry() {
+        addManualEntry() {
+          for (let i = 0; i < 3; i++) {
+            this.addEntry(90, i);
+          }
+        },
+        addEntries() {
+          for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 3; j++) {
+              this.addEntry(Math.random() * 40 + 30, j);
+            }
+          }
+        },
+        addEntry(y: number, i: number) {
             // In case user leaves this page
-            if (!this.$refs.chart)
+            if (!this.$refs['chart' + i])
             {
                 this.stop();
                 return;
             }
 
-            const chart = this.$refs.chart['nativeView'] as LineChart;
+            const chart = this.$refs['chart' + i]['nativeView'] as LineChart;
             const data = chart.getData();
 
             if (data != null) {
@@ -124,11 +142,11 @@ export default Vue.extend({
                 // set.addEntry(...); // can be called as well
 
                 if (set == null) {
-                    set = this.createSet();
+                    set = this.createSet(chart);
                     data.addDataSet(set);
                 }
 
-                data.addEntry({ y: Math.random() * 40 + 30 }, 0);
+                data.addEntry({ y }, 0);
                 // data.addEntry(new Entry(set.getEntryCount(), (float) (Math.random() * 40) + 30), 0);
                 data.notifyDataChanged();
 
@@ -136,7 +154,7 @@ export default Vue.extend({
                 chart.notifyDataSetChanged();
 
                 // limit the number of visible entries
-                chart.setVisibleXRangeMaximum(120);
+                chart.setVisibleXRangeMaximum(1000);
                 // chart.setVisibleYRange(30, AxisDependency.LEFT);
 
                 // move to the latest entry
@@ -148,8 +166,7 @@ export default Vue.extend({
             }
         },
 
-        createSet() {
-            const chart = this.$refs.chart['nativeView'] as LineChart;
+        createSet(chart: LineChart) {
             const set = new LineDataSet(null, 'Dynamic Data');
             set.setAxisDependency(AxisDependency.LEFT);
             set.setColor(ColorTemplate.getHoloBlue());
@@ -166,13 +183,6 @@ export default Vue.extend({
         },
         onChartTap(e) {
             console.log('onChartTap', e.data.extraData, e.highlight);
-        },
-        redraw() {
-            const chart = this.$refs.chart['nativeView'] as LineChart;
-            chart.invalidate();
-        },
-        reset() {
-            this.updateData();
         },
         onNavigationButtonTap() {
             Frame.topmost().goBack();
